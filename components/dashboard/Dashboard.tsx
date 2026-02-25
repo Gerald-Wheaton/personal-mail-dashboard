@@ -20,12 +20,32 @@ export function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(25);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchText, setSearchText] = useState("");
+  const [search, setSearch] = useState("");
+  const [labelFilter, setLabelFilter] = useState<"both" | "primary" | "fm360">(
+    "both"
+  );
+  const [rangeFilter, setRangeFilter] = useState<"all" | "7d" | "30d" | "90d">(
+    "all"
+  );
+  const [unreadOnly, setUnreadOnly] = useState(false);
 
   const loadThreads = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/threads");
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+        search,
+        label: labelFilter,
+        range: rangeFilter,
+        unreadOnly: String(unreadOnly),
+      });
+      const response = await fetch(`/api/threads?${params.toString()}`);
       if (!response.ok) {
         throw new Error("Unable to load threads");
       }
@@ -33,6 +53,7 @@ export function Dashboard() {
       setThreads(data.threads ?? []);
       setUnreadTotal(data.unreadTotal ?? 0);
       setUnreadSenders(data.unreadSenders ?? []);
+      setTotalPages(data.pagination?.totalPages ?? 1);
       if (!selectedThreadId && data.threads?.length) {
         setSelectedThreadId(data.threads[0].id);
       }
@@ -41,7 +62,15 @@ export function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [selectedThreadId]);
+  }, [
+    labelFilter,
+    page,
+    pageSize,
+    rangeFilter,
+    search,
+    selectedThreadId,
+    unreadOnly,
+  ]);
 
   const loadThreadDetail = useCallback(async (threadId: string) => {
     setDetailLoading(true);
@@ -65,6 +94,14 @@ export function Dashboard() {
   useEffect(() => {
     loadThreads();
   }, [loadThreads]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(1);
+      setSearch(searchText.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
   useEffect(() => {
     if (selectedThreadId) {
@@ -112,6 +149,26 @@ export function Dashboard() {
             selectedId={selectedThreadId}
             loading={loading}
             onSelect={setSelectedThreadId}
+            page={page}
+            totalPages={totalPages}
+            search={searchText}
+            labelFilter={labelFilter}
+            rangeFilter={rangeFilter}
+            unreadOnly={unreadOnly}
+            onPageChange={setPage}
+            onSearchChange={setSearchText}
+            onLabelChange={(value) => {
+              setPage(1);
+              setLabelFilter(value);
+            }}
+            onRangeChange={(value) => {
+              setPage(1);
+              setRangeFilter(value);
+            }}
+            onUnreadOnlyChange={(value) => {
+              setPage(1);
+              setUnreadOnly(value);
+            }}
           />
           <ThreadDetail
             thread={selectedThread}

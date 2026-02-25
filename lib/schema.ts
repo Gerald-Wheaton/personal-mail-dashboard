@@ -28,6 +28,8 @@ export const threads = pgTable("threads", {
   id: text("id").primaryKey(),
   subject: text("subject"),
   snippet: text("snippet"),
+  lastFromName: text("last_from_name"),
+  lastFromEmail: text("last_from_email"),
   lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
   unreadCount: integer("unread_count").notNull().default(0),
   labels: jsonb("labels").$type<string[]>().notNull().default([]),

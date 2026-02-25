@@ -25,8 +25,8 @@ export type ThreadListItem = {
   lastMessageAt: string | null;
   unreadCount: number;
   labels: string[];
-  fromName?: string;
-  fromEmail?: string;
+  lastFromName?: string | null;
+  lastFromEmail?: string | null;
 };
 
 export type ThreadMessage = {

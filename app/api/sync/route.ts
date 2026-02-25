@@ -51,6 +51,8 @@ export async function POST() {
         new Set(parsedMessages.flatMap((msg) => msg.labels))
       );
       const snippet = lastMessage?.snippet || parsedMessages[0]?.snippet || "";
+      const lastFromName = lastMessage?.fromName ?? null;
+      const lastFromEmail = lastMessage?.fromEmail ?? null;
 
       await db
         .insert(threads)
@@ -58,6 +60,8 @@ export async function POST() {
           id: threadId,
           subject,
           snippet,
+          lastFromName,
+          lastFromEmail,
           lastMessageAt: lastMessage?.date ?? null,
           unreadCount,
           labels,
@@ -68,6 +72,8 @@ export async function POST() {
           set: {
             subject,
             snippet,
+            lastFromName,
+            lastFromEmail,
             lastMessageAt: lastMessage?.date ?? null,
             unreadCount,
             labels,
