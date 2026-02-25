@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import type { ThreadListItem, ThreadMessage, ThreadSummary, ChatMessage } from "@/lib/types";
+import type { ThreadListItem, ThreadMessage } from "@/lib/types";
 
 function formatTime(value: string | null | undefined) {
   if (!value) return "";
@@ -23,8 +23,6 @@ export function ThreadDetail({
   thread: ThreadListItem | null;
   messages: ThreadMessage[];
   loading: boolean;
-  onSummaryUpdated?: (summary: ThreadSummary | null) => void;
-  onChatUpdated?: (chat: ChatMessage[]) => void;
 }) {
   const [mode, setMode] = useState("reply");
   const [replyBody, setReplyBody] = useState("");

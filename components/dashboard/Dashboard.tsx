@@ -117,8 +117,6 @@ export function Dashboard() {
             thread={selectedThread}
             messages={messages}
             loading={detailLoading}
-            onSummaryUpdated={setSummary}
-            onChatUpdated={setChat}
           />
           <div className="flex flex-col gap-6">
             <SummaryCard
