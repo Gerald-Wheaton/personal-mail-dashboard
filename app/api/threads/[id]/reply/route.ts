@@ -49,8 +49,21 @@ export async function POST(
       ? message.subject
       : `Re: ${message.subject ?? ""}`;
 
-    const to = message.fromEmail ? [message.fromEmail] : [];
-    const cc = mode === "reply-all" ? message.cc ?? [] : [];
+    const baseTo = message.fromEmail ? [message.fromEmail] : [];
+    const replyAllTo = mode === "reply-all" ? message.to ?? [] : [];
+    const replyAllCc = mode === "reply-all" ? message.cc ?? [] : [];
+    const normalize = (items: string[]) =>
+      Array.from(
+        new Set(
+          items
+            .filter(Boolean)
+            .map((item) => item.trim())
+            .filter((item) => item && item !== userEmail)
+        )
+      );
+
+    const to = normalize([...baseTo, ...replyAllTo]);
+    const cc = normalize(replyAllCc);
 
     const headers = [
       `From: ${userEmail}`,
