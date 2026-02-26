@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { IdeationNavbar } from "@/components/dashboard/IdeationNavbar";
 
 const mockMessages = [
   { from: "Alex", body: "Can you approve the roster update?" },
@@ -9,6 +10,7 @@ export default function ThreadDetailIdeationPage() {
   return (
     <div className="app-shell relative">
       <div className="grain" />
+      <IdeationNavbar />
       <div className="relative z-10 mx-auto flex min-h-screen max-w-5xl flex-col gap-8 px-6 py-10">
         <header>
           <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">

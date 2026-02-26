@@ -5,13 +5,14 @@ import { asc, eq } from "drizzle-orm";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const thread = await db
       .select()
       .from(threads)
-      .where(eq(threads.id, params.id));
+      .where(eq(threads.id, id));
     if (!thread.length) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
@@ -19,18 +20,18 @@ export async function GET(
     const threadMessages = await db
       .select()
       .from(messages)
-      .where(eq(messages.threadId, params.id))
+      .where(eq(messages.threadId, id))
       .orderBy(asc(messages.date));
 
     const summary = await db
       .select()
       .from(summaries)
-      .where(eq(summaries.threadId, params.id));
+      .where(eq(summaries.threadId, id));
 
     const chat = await db
       .select()
       .from(chatMessages)
-      .where(eq(chatMessages.threadId, params.id))
+      .where(eq(chatMessages.threadId, id))
       .orderBy(asc(chatMessages.createdAt));
 
     return NextResponse.json({

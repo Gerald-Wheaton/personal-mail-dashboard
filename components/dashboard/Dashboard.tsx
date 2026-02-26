@@ -7,6 +7,7 @@ import { TopBar } from "@/components/dashboard/TopBar";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
 import { ChatPanel } from "@/components/dashboard/ChatPanel";
 import { UnreadSenders } from "@/components/dashboard/UnreadSenders";
+import { IdeationNavbar } from "@/components/dashboard/IdeationNavbar";
 import type { ThreadListItem, ThreadMessage, ThreadSummary, ChatMessage, UnreadSender } from "@/lib/types";
 
 export function Dashboard() {
@@ -133,6 +134,7 @@ export function Dashboard() {
   return (
     <div className="app-shell relative">
       <div className="grain" />
+      <IdeationNavbar />
       <div className="relative z-10 mx-auto flex min-h-screen max-w-[1500px] flex-col gap-6 px-6 py-8">
         <TopBar onSync={handleSync} loading={loading} />
         <UnreadSenders unreadTotal={unreadTotal} senders={unreadSenders} />

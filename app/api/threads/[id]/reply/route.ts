@@ -18,9 +18,10 @@ function formatReplyBody(body: string) {
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const payload = await request.json();
     const body = String(payload?.body ?? "").trim();
     const mode = String(payload?.mode ?? "reply");
@@ -32,7 +33,7 @@ export async function POST(
     const lastMessage = await db
       .select()
       .from(messages)
-      .where(eq(messages.threadId, params.id))
+      .where(eq(messages.threadId, id))
       .orderBy(desc(messages.date))
       .limit(1);
 
@@ -86,7 +87,7 @@ export async function POST(
       userId: "me",
       requestBody: {
         raw: encodeBase64Url(raw),
-        threadId: params.id,
+        threadId: id,
       },
     });
 

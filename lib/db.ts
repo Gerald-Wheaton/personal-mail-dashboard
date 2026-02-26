@@ -1,7 +1,10 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
 import { env } from "@/lib/env";
 
-const sql = neon(env.DATABASE_URL);
+const client = postgres(env.DATABASE_URL, {
+  ssl: "require",
+  max: 10,
+});
 
-export const db = drizzle(sql);
+export const db = drizzle(client);

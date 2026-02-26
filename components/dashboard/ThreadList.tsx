@@ -52,7 +52,7 @@ export function ThreadList({
   onUnreadOnlyChange: (value: boolean) => void;
 }) {
   return (
-    <Card className="flex h-[72vh] flex-col border border-border/60 bg-card/70">
+    <Card className="flex h-[72vh] flex-col overflow-hidden border border-border/60 bg-card/70">
       <div className="border-b border-border/60 px-4 py-3">
         <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">
           Threads
@@ -104,7 +104,7 @@ export function ThreadList({
           </div>
         </div>
       </div>
-      <ScrollArea className="flex-1 px-2 pb-3 pt-2">
+      <ScrollArea className="min-h-0 flex-1 px-2 pb-3 pt-2">
         {loading ? (
           <div className="px-3 py-8 text-sm text-muted-foreground">
             Loading threads...

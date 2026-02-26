@@ -20,9 +20,6 @@ export function TopBar({
             Primary + FM360
           </h1>
         </div>
-        <Badge className="border border-primary/50 bg-primary/10 text-primary">
-          CATEGORY_PERSONAL
-        </Badge>
       </div>
       <div className="flex items-center gap-3">
         <Button

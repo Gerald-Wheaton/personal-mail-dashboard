@@ -1,11 +1,13 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { IdeationNavbar } from "@/components/dashboard/IdeationNavbar";
 
 export default function ChatPanelIdeationPage() {
   return (
     <div className="app-shell relative">
       <div className="grain" />
+      <IdeationNavbar />
       <div className="relative z-10 mx-auto flex min-h-screen max-w-5xl flex-col gap-8 px-6 py-10">
         <header>
           <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">

@@ -6,9 +6,10 @@ import { openai, openaiModel } from "@/lib/openai";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const question = String(body?.question ?? "").trim();
     if (!question) {
@@ -18,7 +19,7 @@ export async function POST(
     const threadMessages = await db
       .select()
       .from(messages)
-      .where(eq(messages.threadId, params.id))
+      .where(eq(messages.threadId, id))
       .orderBy(asc(messages.date));
 
     if (!threadMessages.length) {
@@ -28,7 +29,7 @@ export async function POST(
     const history = await db
       .select()
       .from(chatMessages)
-      .where(eq(chatMessages.threadId, params.id))
+      .where(eq(chatMessages.threadId, id))
       .orderBy(desc(chatMessages.createdAt))
       .limit(10);
 
@@ -72,13 +73,13 @@ export async function POST(
     }
 
     await db.insert(chatMessages).values({
-      threadId: params.id,
+      threadId: id,
       role: "user",
       content: question,
       createdAt: new Date(),
     });
     await db.insert(chatMessages).values({
-      threadId: params.id,
+      threadId: id,
       role: "assistant",
       content: answer,
       createdAt: new Date(),

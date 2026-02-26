@@ -4,6 +4,65 @@ import { db } from "@/lib/db";
 import { messages, threads } from "@/lib/schema";
 import { parseMessage } from "@/lib/gmail-parsers";
 
+function normalizeSyncError(error: unknown): {
+  status: number;
+  code: string;
+  message: string;
+} {
+  const fallback = {
+    status: 500,
+    code: "SYNC_UNKNOWN_ERROR",
+    message: "Unknown sync error",
+  };
+
+  if (!(error instanceof Error)) return fallback;
+
+  if (error.message.includes("Missing OAuth tokens")) {
+    return {
+      status: 401,
+      code: "GMAIL_NOT_CONNECTED",
+      message: "Missing OAuth tokens. Connect Gmail first.",
+    };
+  }
+
+  const maybeResponse = (error as Error & { response?: unknown }).response;
+  const responseData =
+    maybeResponse && typeof maybeResponse === "object"
+      ? (maybeResponse as { data?: unknown }).data
+      : undefined;
+  const googleError =
+    responseData && typeof responseData === "object"
+      ? (responseData as { error?: unknown }).error
+      : undefined;
+  const googleStatus =
+    googleError && typeof googleError === "object"
+      ? (googleError as { status?: unknown }).status
+      : undefined;
+  const googleMessage =
+    googleError && typeof googleError === "object"
+      ? (googleError as { message?: unknown }).message
+      : undefined;
+
+  if (
+    googleStatus === "PERMISSION_DENIED" &&
+    typeof googleMessage === "string" &&
+    googleMessage.includes("Gmail API has not been used")
+  ) {
+    return {
+      status: 503,
+      code: "GMAIL_API_DISABLED",
+      message:
+        "Gmail API is disabled for the configured Google Cloud project. Enable gmail.googleapis.com and retry in a few minutes.",
+    };
+  }
+
+  return {
+    status: 500,
+    code: "SYNC_FAILED",
+    message: error.message || fallback.message,
+  };
+}
+
 export async function POST() {
   try {
     const gmail = await getGmailClient();
@@ -130,7 +189,10 @@ export async function POST() {
 
     return NextResponse.json({ synced: results.length, threadIds: results });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const normalized = normalizeSyncError(error);
+    return NextResponse.json(
+      { error: normalized.message, code: normalized.code },
+      { status: normalized.status }
+    );
   }
 }
