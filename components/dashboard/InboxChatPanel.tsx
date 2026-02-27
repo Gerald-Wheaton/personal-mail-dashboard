@@ -248,6 +248,8 @@ export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
   const [question, setQuestion] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [migrating, setMigrating] = useState(false);
+  const [needsMigration, setNeedsMigration] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sessionUsage, setSessionUsage] = useState<TokenUsage>({
@@ -266,15 +268,16 @@ export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
         const res = await fetch("/api/inbox/chat");
         if (!res.ok) throw new Error("Failed to load history");
         const data = await res.json();
+        if (data.needsMigration) {
+          setNeedsMigration(true);
+          return;
+        }
         setMessages(
           (data.messages ?? []).map(
             (m: {
               id: number;
               role: string;
               content: string;
-              prompt_tokens?: number;
-              completion_tokens?: number;
-              total_tokens?: number;
               promptTokens?: number;
               completionTokens?: number;
               totalTokens?: number;
@@ -293,6 +296,21 @@ export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
     };
     fetchHistory();
   }, []);
+
+  const handleMigrate = async () => {
+    setMigrating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/migrate", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Migration failed");
+      setNeedsMigration(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Migration failed");
+    } finally {
+      setMigrating(false);
+    }
+  };
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -443,6 +461,22 @@ export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
                 <p className="text-sm text-muted-foreground">
                   Loading history…
                 </p>
+              ) : needsMigration ? (
+                <div className="flex flex-col items-center gap-3 py-6 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    The inbox chat table hasn&apos;t been created yet.
+                  </p>
+                  <button
+                    onClick={handleMigrate}
+                    disabled={migrating}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {migrating ? "Applying migration…" : "Apply migration"}
+                  </button>
+                  <p className="text-[11px] text-muted-foreground/60">
+                    or run <code className="font-mono">bun run db:migrate</code> in your terminal
+                  </p>
+                </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col gap-2 py-4 text-center">
                   <p className="text-sm text-muted-foreground">
@@ -506,12 +540,12 @@ export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
                 }
               }}
               placeholder="Has anyone confirmed the date? Did we get the invoice?"
-              disabled={sending}
+              disabled={sending || needsMigration}
               className="flex-1"
             />
             <Button
               onClick={handleSend}
-              disabled={sending || !question.trim()}
+              disabled={sending || !question.trim() || needsMigration}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {sending ? "…" : "Ask"}

@@ -4,6 +4,16 @@ import { inboxChatMessages, threads, messages } from "@/lib/schema";
 import { asc, desc, inArray } from "drizzle-orm";
 import { openai, openaiModel } from "@/lib/openai";
 
+function isMissingTableError(error: unknown): boolean {
+  // PostgreSQL error code 42P01 = "relation does not exist"
+  return (
+    error != null &&
+    typeof error === "object" &&
+    "code" in error &&
+    (error as { code: string }).code === "42P01"
+  );
+}
+
 export async function GET() {
   try {
     const history = await db
@@ -14,6 +24,10 @@ export async function GET() {
 
     return NextResponse.json({ messages: history });
   } catch (error) {
+    if (isMissingTableError(error)) {
+      // Table hasn't been migrated yet — signal the UI without crashing
+      return NextResponse.json({ messages: [], needsMigration: true });
+    }
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -81,20 +95,25 @@ export async function POST(request: Request) {
       })
       .join("\n\n");
 
-    // Fetch recent conversation history
-    const history = await db
-      .select()
-      .from(inboxChatMessages)
-      .orderBy(desc(inboxChatMessages.createdAt))
-      .limit(10);
-
-    const conversation = history
-      .slice()
-      .reverse()
-      .map((msg) => ({
-        role: msg.role as "user" | "assistant",
-        content: msg.content,
-      }));
+    // Fetch recent conversation history (graceful if table not yet migrated)
+    let conversation: { role: "user" | "assistant"; content: string }[] = [];
+    try {
+      const history = await db
+        .select()
+        .from(inboxChatMessages)
+        .orderBy(desc(inboxChatMessages.createdAt))
+        .limit(10);
+      conversation = history
+        .slice()
+        .reverse()
+        .map((msg) => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+        }));
+    } catch (historyError) {
+      if (!isMissingTableError(historyError)) throw historyError;
+      // Table not yet created — proceed without history
+    }
 
     const response = await openai.chat.completions.create({
       model: openaiModel,
@@ -118,20 +137,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Empty response" }, { status: 500 });
     }
 
-    // Persist both turns — only the assistant row carries token counts
-    await db.insert(inboxChatMessages).values({
-      role: "user",
-      content: question,
-      createdAt: new Date(),
-    });
-    await db.insert(inboxChatMessages).values({
-      role: "assistant",
-      content: answer,
-      promptTokens: usage?.prompt_tokens ?? null,
-      completionTokens: usage?.completion_tokens ?? null,
-      totalTokens: usage?.total_tokens ?? null,
-      createdAt: new Date(),
-    });
+    // Persist both turns (graceful if table not yet migrated — answer still returned)
+    try {
+      await db.insert(inboxChatMessages).values({
+        role: "user",
+        content: question,
+        createdAt: new Date(),
+      });
+      await db.insert(inboxChatMessages).values({
+        role: "assistant",
+        content: answer,
+        promptTokens: usage?.prompt_tokens ?? null,
+        completionTokens: usage?.completion_tokens ?? null,
+        totalTokens: usage?.total_tokens ?? null,
+        createdAt: new Date(),
+      });
+    } catch (insertError) {
+      if (!isMissingTableError(insertError)) throw insertError;
+      // Table not yet created — answers work, but history won't persist
+    }
 
     return NextResponse.json({
       answer,
@@ -168,6 +192,9 @@ export async function DELETE() {
     await db.delete(inboxChatMessages);
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (isMissingTableError(error)) {
+      return NextResponse.json({ ok: true });
+    }
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
