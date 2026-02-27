@@ -144,7 +144,9 @@ export function Dashboard() {
           inboxChatMode={inboxChatMode}
           onToggleInboxChat={() => setInboxChatMode((v) => !v)}
         />
-        <UnreadSenders unreadTotal={unreadTotal} senders={unreadSenders} />
+        {!inboxChatMode && (
+          <UnreadSenders unreadTotal={unreadTotal} senders={unreadSenders} />
+        )}
 
         {error ? (
           <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
@@ -153,7 +155,11 @@ export function Dashboard() {
         ) : null}
 
         {inboxChatMode ? (
-          <InboxChatPanel threads={threads} />
+          <InboxChatPanel
+            threads={threads}
+            unreadTotal={unreadTotal}
+            unreadSenders={unreadSenders}
+          />
         ) : (
           <div className="grid flex-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)_360px]">
             <ThreadList

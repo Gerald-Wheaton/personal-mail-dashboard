@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import type { InboxChatMessage, ThreadListItem, TokenUsage } from "@/lib/types";
+import type { InboxChatMessage, ThreadListItem, TokenUsage, UnreadSender } from "@/lib/types";
 
 // ─── Token Usage Badge ────────────────────────────────────────────────────────
 
@@ -243,7 +243,15 @@ function ScopePicker({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
+export function InboxChatPanel({
+  threads,
+  unreadTotal,
+  unreadSenders,
+}: {
+  threads: ThreadListItem[];
+  unreadTotal: number;
+  unreadSenders: UnreadSender[];
+}) {
   const [messages, setMessages] = useState<InboxChatMessage[]>([]);
   const [question, setQuestion] = useState("");
   const [sending, setSending] = useState(false);
@@ -414,6 +422,32 @@ export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
       : `${selectedIds.size} thread${selectedIds.size === 1 ? "" : "s"}`;
 
   return (
+    <div className="flex flex-1 min-h-0 flex-col gap-3">
+      {/* ── Compact Unread Strip ── */}
+      <div className="flex items-center gap-3 overflow-x-auto rounded-xl border border-border/40 bg-card/60 px-4 py-2.5 shrink-0">
+        <span className="shrink-0 text-sm font-semibold text-foreground">
+          {unreadTotal} Unread
+        </span>
+        <div className="h-4 w-px shrink-0 bg-border/60" />
+        {unreadSenders.length ? (
+          unreadSenders.map((sender) => (
+            <div
+              key={sender.email}
+              className="inline-flex shrink-0 items-center gap-2 rounded-md border border-border/60 bg-background/50 px-3 py-1 text-xs"
+            >
+              <span className="font-medium text-foreground">
+                {sender.name || sender.email}
+              </span>
+              <span className="rounded bg-primary/20 px-1.5 py-0.5 font-semibold text-primary">
+                {sender.unreadCount}
+              </span>
+            </div>
+          ))
+        ) : (
+          <span className="text-xs text-muted-foreground">No unread senders</span>
+        )}
+      </div>
+
     <div className="grid flex-1 min-h-0 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
       {/* ── Left: Thread Scope Picker ── */}
       <Card className="flex flex-col border border-border/60 bg-card/70 p-4 h-full overflow-hidden">
@@ -556,6 +590,7 @@ export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
           </div>
         </CardContent>
       </Card>
+    </div>
     </div>
   );
 }
