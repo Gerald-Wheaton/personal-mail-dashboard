@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { inboxChatMessages, threads, messages } from "@/lib/schema";
 import { asc, desc, inArray } from "drizzle-orm";
-import { openai, openaiModel } from "@/lib/openai";
+import { aiChat, billingUrl, isQuotaError } from "@/lib/ai";
 
 function isMissingTableError(error: unknown): boolean {
   // PostgreSQL error code 42P01 = "relation does not exist"
@@ -115,23 +115,16 @@ export async function POST(request: Request) {
       // Table not yet created — proceed without history
     }
 
-    const response = await openai.chat.completions.create({
-      model: openaiModel,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are an assistant that answers questions about a Gmail inbox. Use only the provided email context. Be concise and direct. When referencing a specific thread, quote its subject in double quotes. If the answer is not in the inbox, say so clearly.",
-        },
-        { role: "user", content: `Inbox context:\n${inboxContext}` },
-        ...conversation,
-        { role: "user", content: question },
-      ],
-      temperature: 0.2,
-    });
-
-    const answer = response.choices[0]?.message?.content?.trim() ?? "";
-    const usage = response.usage;
+    const { content: answer, usage } = await aiChat([
+      {
+        role: "system",
+        content:
+          "You are an assistant that answers questions about a Gmail inbox. Use only the provided email context. Be concise and direct. When referencing a specific thread, quote its subject in double quotes. If the answer is not in the inbox, say so clearly.",
+      },
+      { role: "user", content: `Inbox context:\n${inboxContext}` },
+      ...conversation,
+      { role: "user", content: question },
+    ]);
 
     if (!answer) {
       return NextResponse.json({ error: "Empty response" }, { status: 500 });
@@ -147,9 +140,9 @@ export async function POST(request: Request) {
       await db.insert(inboxChatMessages).values({
         role: "assistant",
         content: answer,
-        promptTokens: usage?.prompt_tokens ?? null,
-        completionTokens: usage?.completion_tokens ?? null,
-        totalTokens: usage?.total_tokens ?? null,
+        promptTokens: usage?.promptTokens ?? null,
+        completionTokens: usage?.completionTokens ?? null,
+        totalTokens: usage?.totalTokens ?? null,
         createdAt: new Date(),
       });
     } catch (insertError) {
@@ -157,32 +150,19 @@ export async function POST(request: Request) {
       // Table not yet created — answers work, but history won't persist
     }
 
-    return NextResponse.json({
-      answer,
-      usage: usage
-        ? {
-            promptTokens: usage.prompt_tokens,
-            completionTokens: usage.completion_tokens,
-            totalTokens: usage.total_tokens,
-          }
-        : null,
-    });
+    return NextResponse.json({ answer, usage });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    if (
-      error instanceof Error &&
-      "status" in error &&
-      (error as { status?: number }).status === 429
-    ) {
+    if (isQuotaError(error)) {
       return NextResponse.json(
         {
-          error: "OpenAI quota exceeded.",
+          error: "API quota exceeded.",
           errorCode: "OPENAI_QUOTA_EXCEEDED",
-          actionUrl: "https://platform.openai.com/account/billing",
+          actionUrl: billingUrl,
         },
         { status: 429 }
       );
     }
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

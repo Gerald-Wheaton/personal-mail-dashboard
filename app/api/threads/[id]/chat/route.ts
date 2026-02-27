@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { chatMessages, messages } from "@/lib/schema";
 import { asc, desc, eq } from "drizzle-orm";
-import { openai, openaiModel } from "@/lib/openai";
+import { aiChat } from "@/lib/ai";
 
 export async function POST(
   request: Request,
@@ -52,22 +52,17 @@ export async function POST(
         content: msg.content,
       }));
 
-    const response = await openai.chat.completions.create({
-      model: openaiModel,
-      messages: [
-        {
-          role: "system",
-          content:
-            "Answer questions using only the provided email thread context. If the answer is not in the thread, say you are not sure.",
-        },
-        { role: "user", content: `Thread context:\n${threadContext}` },
-        ...conversation,
-        { role: "user", content: question },
-      ],
-      temperature: 0.2,
-    });
+    const { content: answer } = await aiChat([
+      {
+        role: "system",
+        content:
+          "Answer questions using only the provided email thread context. If the answer is not in the thread, say you are not sure.",
+      },
+      { role: "user", content: `Thread context:\n${threadContext}` },
+      ...conversation,
+      { role: "user", content: question },
+    ]);
 
-    const answer = response.choices[0]?.message?.content?.trim() ?? "";
     if (!answer) {
       return NextResponse.json({ error: "Empty response" }, { status: 500 });
     }

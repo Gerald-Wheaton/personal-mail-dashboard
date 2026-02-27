@@ -2,30 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { messages, summaries } from "@/lib/schema";
 import { asc, eq } from "drizzle-orm";
-import { openai, openaiModel } from "@/lib/openai";
-
-const OPENAI_BILLING_URL =
-  "https://platform.openai.com/settings/organization/billing/overview";
-
-function isOpenAIQuotaError(error: unknown) {
-  if (!error || typeof error !== "object") return false;
-  const maybeError = error as {
-    status?: number;
-    code?: string;
-    message?: string;
-    error?: { code?: string; message?: string };
-  };
-  const status = maybeError.status;
-  const code = maybeError.code ?? maybeError.error?.code;
-  const message = (maybeError.message ?? maybeError.error?.message ?? "").toLowerCase();
-  return (
-    status === 429 &&
-    (code === "insufficient_quota" ||
-      message.includes("exceeded your current quota") ||
-      message.includes("insufficient_quota") ||
-      message.includes("quota"))
-  );
-}
+import { aiChat, billingUrl, isQuotaError } from "@/lib/ai";
 
 export async function POST(
   _request: Request,
@@ -54,20 +31,15 @@ export async function POST(
       })
       .join("\n\n---\n\n");
 
-    const response = await openai.chat.completions.create({
-      model: openaiModel,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You summarize email threads. Provide a concise summary with key decisions, asks, and next steps. Keep it under 120 words.",
-        },
-        { role: "user", content: formatted },
-      ],
-      temperature: 0.2,
-    });
+    const { content: summaryText } = await aiChat([
+      {
+        role: "system",
+        content:
+          "You summarize email threads. Provide a concise summary with key decisions, asks, and next steps. Keep it under 120 words.",
+      },
+      { role: "user", content: formatted },
+    ]);
 
-    const summaryText = response.choices[0]?.message?.content?.trim() ?? "";
     if (!summaryText) {
       return NextResponse.json({ error: "Empty summary" }, { status: 500 });
     }
@@ -86,13 +58,13 @@ export async function POST(
 
     return NextResponse.json({ threadId: id, summaryText });
   } catch (error) {
-    if (isOpenAIQuotaError(error)) {
+    if (isQuotaError(error)) {
       return NextResponse.json(
         {
           error:
-            "No OpenAI tokens/credits left for summary generation. Add billing credits, then try again.",
+            "API quota exceeded. Add billing credits to your provider account, then try again.",
           errorCode: "OPENAI_QUOTA_EXCEEDED",
-          actionUrl: OPENAI_BILLING_URL,
+          actionUrl: billingUrl,
         },
         { status: 429 }
       );
