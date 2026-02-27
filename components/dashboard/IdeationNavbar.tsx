@@ -7,6 +7,9 @@ const IDEATION_PAGES = [
   { href: "/summary-card-ideation", label: "Summary Card" },
   { href: "/chat-panel-ideation", label: "Chat Panel" },
   { href: "/unread-senders-ideation", label: "Unread Senders" },
+  { href: "/triage-ideation", label: "Focus Mode" },
+  { href: "/digest-ideation", label: "AI Digest" },
+  { href: "/status-board-ideation", label: "Status Board" },
 ];
 
 export function IdeationNavbar() {
