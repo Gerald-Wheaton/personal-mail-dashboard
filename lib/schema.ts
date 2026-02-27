@@ -80,3 +80,15 @@ export const chatMessages = pgTable("chat_messages", {
     .notNull()
     .defaultNow(),
 });
+
+export const inboxChatMessages = pgTable("inbox_chat_messages", {
+  id: serial("id").primaryKey(),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  promptTokens: integer("prompt_tokens"),
+  completionTokens: integer("completion_tokens"),
+  totalTokens: integer("total_tokens"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

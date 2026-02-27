@@ -29,6 +29,22 @@ export type ThreadListItem = {
   lastFromEmail?: string | null;
 };
 
+export type InboxChatMessage = {
+  id: number;
+  role: "user" | "assistant";
+  content: string;
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  totalTokens?: number | null;
+  createdAt: string;
+};
+
+export type TokenUsage = {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+};
+
 export type ThreadMessage = {
   id: string;
   threadId: string;
