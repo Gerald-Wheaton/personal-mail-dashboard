@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ThemeSwitcher } from "@/components/dashboard/ThemeSwitcher";
 
 export function TopBar({
   onSync,
@@ -25,6 +26,7 @@ export function TopBar({
         </div>
       </div>
       <div className="flex items-center gap-3">
+        <ThemeSwitcher />
         <Button
           onClick={onToggleInboxChat}
           variant={inboxChatMode ? "default" : "secondary"}
