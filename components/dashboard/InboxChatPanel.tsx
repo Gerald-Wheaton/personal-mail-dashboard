@@ -312,12 +312,12 @@ export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
     }
   };
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom whenever messages change or while a response is pending
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, sending]);
 
   const handleToggleThread = (id: string) => {
     setSelectedIds((prev) => {
@@ -414,9 +414,9 @@ export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
       : `${selectedIds.size} thread${selectedIds.size === 1 ? "" : "s"}`;
 
   return (
-    <div className="grid flex-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+    <div className="grid flex-1 min-h-0 gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
       {/* ── Left: Thread Scope Picker ── */}
-      <Card className="flex flex-col border border-border/60 bg-card/70 p-4">
+      <Card className="flex flex-col border border-border/60 bg-card/70 p-4 h-full overflow-hidden">
         <ScopePicker
           threads={threads}
           selectedIds={selectedIds}
@@ -426,8 +426,8 @@ export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
       </Card>
 
       {/* ── Right: Chat Interface ── */}
-      <Card className="flex flex-col border border-border/60 bg-card/70">
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
+      <Card className="flex flex-col border border-border/60 bg-card/70 h-full overflow-hidden">
+        <CardHeader className="flex shrink-0 flex-row items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">
               Inbox Q&amp;A
@@ -453,10 +453,13 @@ export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
           </div>
         </CardHeader>
 
-        <CardContent className="flex flex-1 flex-col gap-4">
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
           {/* Messages */}
-          <ScrollArea className="flex-1 rounded-xl border border-border/60 bg-background/40 p-3">
-            <div ref={scrollRef} className="flex flex-col gap-3">
+          <div
+            ref={scrollRef}
+            className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-border/60 bg-background/40 p-3"
+          >
+            <div className="flex flex-col gap-3">
               {loading ? (
                 <p className="text-sm text-muted-foreground">
                   Loading history…
@@ -522,7 +525,7 @@ export function InboxChatPanel({ threads }: { threads: ThreadListItem[] }) {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {error && (
             <p className="text-sm text-destructive">{error}</p>

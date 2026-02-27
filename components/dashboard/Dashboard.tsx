@@ -137,7 +137,7 @@ export function Dashboard() {
     <div className="app-shell relative">
       <div className="grain" />
       <IdeationNavbar />
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-[1500px] flex-col gap-6 px-6 py-8">
+      <div className={`relative z-10 mx-auto max-w-[1500px] flex flex-col gap-6 px-6 py-8 ${inboxChatMode ? "h-dvh overflow-hidden" : "min-h-screen"}`}>
         <TopBar
           onSync={handleSync}
           loading={loading}
