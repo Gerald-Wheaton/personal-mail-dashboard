@@ -6,6 +6,7 @@ import { ThreadList } from "@/components/dashboard/ThreadList";
 import { TopBar } from "@/components/dashboard/TopBar";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
 import { ChatPanel } from "@/components/dashboard/ChatPanel";
+import { InboxChatPanel } from "@/components/dashboard/InboxChatPanel";
 import { UnreadSenders } from "@/components/dashboard/UnreadSenders";
 import { IdeationNavbar } from "@/components/dashboard/IdeationNavbar";
 import type { ThreadListItem, ThreadMessage, ThreadSummary, ChatMessage, UnreadSender } from "@/lib/types";
@@ -33,6 +34,7 @@ export function Dashboard() {
     "all"
   );
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [inboxChatMode, setInboxChatMode] = useState(false);
 
   const loadThreads = useCallback(async () => {
     setLoading(true);
@@ -136,7 +138,12 @@ export function Dashboard() {
       <div className="grain" />
       <IdeationNavbar />
       <div className="relative z-10 mx-auto flex min-h-screen max-w-[1500px] flex-col gap-6 px-6 py-8">
-        <TopBar onSync={handleSync} loading={loading} />
+        <TopBar
+          onSync={handleSync}
+          loading={loading}
+          inboxChatMode={inboxChatMode}
+          onToggleInboxChat={() => setInboxChatMode((v) => !v)}
+        />
         <UnreadSenders unreadTotal={unreadTotal} senders={unreadSenders} />
 
         {error ? (
@@ -145,53 +152,57 @@ export function Dashboard() {
           </div>
         ) : null}
 
-        <div className="grid flex-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)_360px]">
-          <ThreadList
-            threads={threads}
-            selectedId={selectedThreadId}
-            loading={loading}
-            onSelect={setSelectedThreadId}
-            page={page}
-            totalPages={totalPages}
-            search={searchText}
-            labelFilter={labelFilter}
-            rangeFilter={rangeFilter}
-            unreadOnly={unreadOnly}
-            onPageChange={setPage}
-            onSearchChange={setSearchText}
-            onLabelChange={(value) => {
-              setPage(1);
-              setLabelFilter(value);
-            }}
-            onRangeChange={(value) => {
-              setPage(1);
-              setRangeFilter(value);
-            }}
-            onUnreadOnlyChange={(value) => {
-              setPage(1);
-              setUnreadOnly(value);
-            }}
-          />
-          <ThreadDetail
-            thread={selectedThread}
-            messages={messages}
-            loading={detailLoading}
-          />
-          <div className="flex flex-col gap-6">
-            <SummaryCard
-              summary={summary}
-              threadId={selectedThreadId}
-              onSummaryUpdated={setSummary}
+        {inboxChatMode ? (
+          <InboxChatPanel threads={threads} />
+        ) : (
+          <div className="grid flex-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)_360px]">
+            <ThreadList
+              threads={threads}
+              selectedId={selectedThreadId}
+              loading={loading}
+              onSelect={setSelectedThreadId}
+              page={page}
+              totalPages={totalPages}
+              search={searchText}
+              labelFilter={labelFilter}
+              rangeFilter={rangeFilter}
+              unreadOnly={unreadOnly}
+              onPageChange={setPage}
+              onSearchChange={setSearchText}
+              onLabelChange={(value) => {
+                setPage(1);
+                setLabelFilter(value);
+              }}
+              onRangeChange={(value) => {
+                setPage(1);
+                setRangeFilter(value);
+              }}
+              onUnreadOnlyChange={(value) => {
+                setPage(1);
+                setUnreadOnly(value);
+              }}
+            />
+            <ThreadDetail
+              thread={selectedThread}
+              messages={messages}
               loading={detailLoading}
             />
-            <ChatPanel
-              threadId={selectedThreadId}
-              messages={chat}
-              onChatUpdated={setChat}
-              loading={detailLoading}
-            />
+            <div className="flex flex-col gap-6">
+              <SummaryCard
+                summary={summary}
+                threadId={selectedThreadId}
+                onSummaryUpdated={setSummary}
+                loading={detailLoading}
+              />
+              <ChatPanel
+                threadId={selectedThreadId}
+                messages={chat}
+                onChatUpdated={setChat}
+                loading={detailLoading}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
