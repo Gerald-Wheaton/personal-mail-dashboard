@@ -34,6 +34,8 @@ export function ThreadList({
   onLabelChange,
   onRangeChange,
   onUnreadOnlyChange,
+  senderFilterLabel,
+  onClearSenderFilter,
 }: {
   threads: ThreadListItem[];
   selectedId: string | null;
@@ -50,6 +52,8 @@ export function ThreadList({
   onLabelChange: (value: "both" | "primary" | "fm360") => void;
   onRangeChange: (value: "all" | "7d" | "30d" | "90d") => void;
   onUnreadOnlyChange: (value: boolean) => void;
+  senderFilterLabel?: string | null;
+  onClearSenderFilter?: () => void;
 }) {
   return (
     <Card className="flex h-[72vh] flex-col overflow-hidden border border-border/60 bg-card/70">
@@ -67,6 +71,20 @@ export function ThreadList({
             placeholder="Search subject, sender, snippet..."
             className="bg-background/40"
           />
+          {senderFilterLabel && (
+            <div className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5">
+              <span className="text-xs text-foreground">
+                From: <span className="font-semibold">{senderFilterLabel}</span>
+              </span>
+              <button
+                type="button"
+                onClick={onClearSenderFilter}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                ×
+              </button>
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
             <Select value={labelFilter} onValueChange={onLabelChange}>
               <SelectTrigger className="h-9 w-[120px] bg-background/40">

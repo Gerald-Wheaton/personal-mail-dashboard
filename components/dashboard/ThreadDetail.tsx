@@ -67,8 +67,8 @@ function isDisclaimerStart(value: string) {
 }
 
 function isSignoffLine(value: string) {
-  return /^(thanks|thank you|best|best regards|regards|kind regards|warm regards|sincerely|cheers|respectfully)[,!]?\s*$/i.test(
-    value
+  return /^(thanks|thank you|many thanks|best|best regards|regards|kind regards|warm regards|warmly|sincerely|cheers|respectfully|cordially|yours truly|yours sincerely|all the best|take care|talk soon|speak soon|looking forward)[,!.]?\s*$/i.test(
+    value.trim()
   );
 }
 
@@ -111,64 +111,71 @@ function parseMessageBody(rawBody: string | null | undefined): ParsedMessage {
   const quotedStart = findQuotedThreadStart(lines);
   const workingLines = quotedStart === -1 ? lines : lines.slice(0, quotedStart);
 
-  if (!workingLines.length) {
-    return { body: "", footerLines: [] };
+  if (!workingLines.length) return { body: "", footerLines: [] };
+
+  // Forward scan: disclaimer can appear anywhere
+  for (let i = 0; i < workingLines.length; i += 1) {
+    if (isDisclaimerStart(workingLines[i].trim())) {
+      return {
+        body: workingLines.slice(0, i).join("\n").trim(),
+        footerLines: workingLines.slice(i).map((l) => l.trim()).filter(Boolean),
+      };
+    }
   }
 
+  // Bottom-up scan for signature / footer boundary
   let footerStart = -1;
+  let inSignatureZone = false;
 
-  for (let i = 0; i < workingLines.length; i += 1) {
+  for (let i = workingLines.length - 1; i >= 0; i -= 1) {
     const line = workingLines[i].trim();
     if (!line) continue;
-    if (isDisclaimerStart(line)) {
+
+    // Hard delimiters always win
+    if (isFooterDelimiter(line)) { footerStart = i; break; }
+    if (isSignoffLine(line))     { footerStart = i; break; }
+
+    // Contact / branding lines that are classic signature content
+    if (
+      looksLikeEmail(line) ||
+      looksLikePhone(line) ||
+      looksLikeUrl(line) ||
+      looksLikeCompany(line) ||
+      looksLikeRole(line)
+    ) {
       footerStart = i;
+      inSignatureZone = true;
+    } else if (inSignatureZone) {
+      // We're inside a detected signature zone.
+      // A short line (≤4 words, no sentence-ending punctuation) is very
+      // likely just the sender's display name — absorb it and look one
+      // step further back for a signoff.
+      const wordCount = line.split(/\s+/).filter(Boolean).length;
+      if (wordCount <= 4 && !/[.!?]$/.test(line)) {
+        footerStart = i;
+        // Peek backward past any blank lines for a signoff
+        for (let j = i - 1; j >= Math.max(0, i - 5); j -= 1) {
+          const prev = workingLines[j].trim();
+          if (!prev) continue;
+          if (isSignoffLine(prev)) footerStart = j;
+          break; // only check the first non-blank line above
+        }
+      }
+      // Stop regardless — body content starts here
+      break;
+    } else {
       break;
     }
   }
 
   if (footerStart === -1) {
-    for (let i = workingLines.length - 1; i >= 0; i -= 1) {
-      const line = workingLines[i].trim();
-      if (!line) continue;
-
-      if (isFooterDelimiter(line)) {
-        footerStart = i;
-        break;
-      }
-
-      if (isSignoffLine(line)) {
-        footerStart = i;
-        break;
-      }
-
-      if (
-        looksLikeEmail(line) ||
-        looksLikePhone(line) ||
-        looksLikeUrl(line) ||
-        looksLikeCompany(line) ||
-        looksLikeRole(line)
-      ) {
-        footerStart = i;
-      } else if (footerStart !== -1) {
-        break;
-      }
-    }
+    return { body: workingLines.join("\n").trim(), footerLines: [] };
   }
 
-  if (footerStart === -1) {
-    return {
-      body: workingLines.join("\n").trim(),
-      footerLines: [],
-    };
-  }
-
-  const body = workingLines
-    .slice(0, footerStart)
-    .join("\n")
-    .trim();
-  const footerLines = workingLines.slice(footerStart).map((line) => line.trim()).filter(Boolean);
-
-  return { body, footerLines };
+  return {
+    body: workingLines.slice(0, footerStart).join("\n").trim(),
+    footerLines: workingLines.slice(footerStart).map((l) => l.trim()).filter(Boolean),
+  };
 }
 
 function uniquePush(target: string[], value: string) {
@@ -386,7 +393,7 @@ export function ThreadDetail({
                 return (
                   <div
                     key={message.id}
-                    className={`rounded-2xl border px-4 py-3 ${
+                    className={`min-w-0 overflow-hidden rounded-2xl border px-4 py-3 ${
                       message.isUnread
                         ? "border-primary/50 bg-primary/5"
                         : "border-border/60 bg-background/40"
@@ -417,7 +424,7 @@ export function ThreadDetail({
                       </div>
                     </div>
                     {!isCollapsed ? (
-                      <p className="mt-2 text-sm whitespace-pre-wrap text-foreground/90">
+                      <p className="mt-2 break-words whitespace-pre-wrap text-sm text-foreground/90">
                         {parsed.body || "(No new message content after cleanup)"}
                       </p>
                     ) : null}

@@ -35,6 +35,7 @@ export function Dashboard() {
   );
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [inboxChatMode, setInboxChatMode] = useState(false);
+  const [senderFilter, setSenderFilter] = useState<string | null>(null);
 
   const loadThreads = useCallback(async () => {
     setLoading(true);
@@ -145,7 +146,12 @@ export function Dashboard() {
           onToggleInboxChat={() => setInboxChatMode((v) => !v)}
         />
         {!inboxChatMode && (
-          <UnreadSenders unreadTotal={unreadTotal} senders={unreadSenders} />
+          <UnreadSenders
+            unreadTotal={unreadTotal}
+            senders={unreadSenders}
+            activeSenderEmail={senderFilter}
+            onSenderFilter={setSenderFilter}
+          />
         )}
 
         {error ? (
@@ -163,7 +169,23 @@ export function Dashboard() {
         ) : (
           <div className="grid flex-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)_360px]">
             <ThreadList
-              threads={threads}
+              threads={
+                senderFilter
+                  ? threads.filter(
+                      (t) =>
+                        t.lastFromEmail === senderFilter ||
+                        unreadSenders.find(
+                          (s) => s.email === senderFilter && s.name === t.lastFromName
+                        )
+                    )
+                  : threads
+              }
+              senderFilterLabel={
+                senderFilter
+                  ? (unreadSenders.find((s) => s.email === senderFilter)?.name ?? senderFilter)
+                  : null
+              }
+              onClearSenderFilter={() => setSenderFilter(null)}
               selectedId={selectedThreadId}
               loading={loading}
               onSelect={setSelectedThreadId}
